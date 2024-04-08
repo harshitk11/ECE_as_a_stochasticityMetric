@@ -4,7 +4,16 @@ Methods used to calculate the Expected Calibration Error (ECE) on the test split
 
 from sklearn.metrics import precision_score, recall_score, precision_recall_curve, auc, mean_squared_error
 
-# calibration library source: https://pypi.org/project/uncertainty-calibration/
+
+"""
+## Reference for calibration library: https://pypi.org/project/uncertainty-calibration/
+
+@inproceedings{kumar2019calibration,
+  author = {Ananya Kumar and Percy Liang and Tengyu Ma},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  title = {Verified Uncertainty Calibration},
+  year = {2019}}
+"""
 import calibration as cal
 
 # Method that takes as input y_true and y_prob and returns the ECE, Recall, Precision, AUC-PR and MSE
@@ -31,18 +40,19 @@ class metric_vs_time_combined_simulation:
         
         for i, stochasticity_level in enumerate(stochasticity_list):
             print(f"Stochasticity Level: {stochasticity_level}")
-            slevel_metric_timestep[stochasticity_level] = {}
+            
             # Add entries for metric
+            slevel_metric_timestep[stochasticity_level] = {}
             slevel_metric_timestep[stochasticity_level]['ece'] = {}
             slevel_metric_timestep[stochasticity_level]['precision'] = {}
             slevel_metric_timestep[stochasticity_level]['recall'] = {}
             slevel_metric_timestep[stochasticity_level]['auc_pr'] = {}
             slevel_metric_timestep[stochasticity_level]['mse'] = {}
             
-            
+            # Load the predictions and ground truth on the test split for a given trained-dnn testing on test split corresponding to stochasticity_level
             raw_pred_forecastGT_dict = load_raw_pred_forecastGT_dict(dnn_name, stochasticity_level, dataset_type=dataset_type)
                 
-            
+            # For each timestep combine the predictions across all the samples to generate the statistical score
             for timestep in range(10,59):
                 print(f"Time Step: {timestep}")
                 
@@ -50,13 +60,10 @@ class metric_vs_time_combined_simulation:
                 y_true = []
                 
                 for j in range(num_samples):
-                    # print(f"Sample: {j}")
                     try:
                         test_sample = raw_pred_forecastGT_dict[j]
                         prediction = test_sample['prediction']
                         observedGT = test_sample['observedGT']
-                        # print(f"Prediction Shape: {prediction.shape}")
-                        # print(f"ObservedGT Shape: {observedGT.shape}")
                         
                         prediction_timestep = prediction[timestep]
                         observedGT_timestep = observedGT[timestep]
@@ -82,12 +89,6 @@ class metric_vs_time_combined_simulation:
         # Generate the plots
         base_savepath = os.path.join(base_savepath, "combined_simulation","pickle_file",dnn_name)
         os.makedirs(base_savepath, exist_ok=True)
-        
-        # Save the sleve_metric_timestep dictionary to a pickle file
-        with open(os.path.join(base_savepath, "slevel_metric_timestep.pkl"), "wb") as f:
-            pickle.dump(slevel_metric_timestep, f)
-            
-        
         metric_vs_time_combined_simulation.plot_metrics_for_combined_simulation(slevel_metric_timestep, base_savepath)
         
         return slevel_metric_timestep
@@ -147,17 +148,12 @@ class metric_vs_time_combined_simulation:
 
             # Set ylim for different metrics: AUC-PR and Recall (0.75:1.01), ECE (0.0:0.25), MSE (0.0:0.25)
             if metric == 'auc_pr' or metric == 'recall':
-                # plt.ylim(0.75, 1.01)
-                # Do nothing
                 pass
             elif metric == 'ece':
                 plt.ylim(-0.01, 0.25)
             elif metric == 'mse':
                 plt.ylim(-0.01, 0.25)
                     
-            
-            # plt.ylim(0.70, 1.01)  # Set the upper y-axis limit
-
             plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.2, zorder=1)  # Adjust grid to match previous style
 
             plt.tight_layout()  # Adjust layout
